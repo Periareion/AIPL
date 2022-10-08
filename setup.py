@@ -4,11 +4,11 @@ VERSION = '0.0.0'
 DESCRIPTION = 'A Simple Plotting Library (for now)'
 
 setup(
-    name="PlotPlot",
+    name="AIPL",
     version=VERSION,
     author="Periareion & monoamine11231",
     description=DESCRIPTION,
     packages=find_packages(),
-    install_requires=[],
+    install_requires=['PyOpenGL'],
     keywords=[],
 )
