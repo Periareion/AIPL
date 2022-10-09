@@ -1,6 +1,7 @@
 
 from AIPL import *
 
-win = Window("Plot", (600, 500))
-plot = LinePlot(*get_points(square, -10, 5, 100), width=3, margin_factor=0.05)
+win = Window("Plot")
+plot = LinePlot(*get_points(lambda x: sin(x), 0, 4*tau, 300), size=(300,200))
 win.render(plot)
+win.mainloop()

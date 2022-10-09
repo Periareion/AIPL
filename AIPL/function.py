@@ -27,6 +27,9 @@ def get_points(f, start=0, end=1, n=10):
     return ar, list(map(f, ar))
 
 
+pi = np.pi
+tau = 2*pi
+
 square = Function(lambda x: x**2, lambda x: 2*x, lambda x: x**3/3)
 cube = Function(lambda x: x**3, lambda x: 3*x**2, lambda x: x**4/4)
 
