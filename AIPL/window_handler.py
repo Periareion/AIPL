@@ -4,7 +4,6 @@ from OpenGL.GLUT import *
 from OpenGL.GLU import *
 
 
-# I changed it from _Window to Window for easier testing in test.py
 class Window:
 
 
@@ -17,6 +16,12 @@ class Window:
         self.__resizable = resizable
         self.__background_color = background_color
 
+        glutInit()
+        glutInitDisplayMode(GLUT_RGBA)
+        glutInitWindowSize(self.__width, self.__height)
+        glutInitWindowPosition(0,0)
+
+        self.__window = glutCreateWindow(self.__title)
 
     def iterate(self):
         glViewport(0, 0, self.__width, self.__height)
@@ -26,7 +31,6 @@ class Window:
         glMatrixMode (GL_MODELVIEW)
         glLoadIdentity()
 
-
     def render(self, obj=None):
 
         def show():
@@ -34,15 +38,10 @@ class Window:
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
             glLoadIdentity() # Reset all graphic/shape's position
             self.iterate()
+            # draw window here
             obj.draw()
-            glutSwapBuffers()
-        
-        glutInit()
-        glutInitDisplayMode(GLUT_RGBA)
-        glutInitWindowSize(self.__width, self.__height)
-        glutInitWindowPosition(0,0)
 
-        self.__window = glutCreateWindow(self.__title)
+            glutSwapBuffers()
 
         glutDisplayFunc(show)
         glutIdleFunc(show)

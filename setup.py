@@ -9,6 +9,6 @@ setup(
     author="Periareion & monoamine11231",
     description=DESCRIPTION,
     packages=find_packages(),
-    install_requires=['PyOpenGL'],
+    install_requires=['PyOpenGL', 'numpy'],
     keywords=[],
 )
