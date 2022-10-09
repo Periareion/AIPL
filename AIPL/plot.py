@@ -1,7 +1,7 @@
 
 import numpy as np
 
-from .shapes import *
+from .geometry import *
 
 EAST, NORTH, WEST, SOUTH = 0, np.pi/2, np.pi, 3/4*np.pi
 
@@ -9,19 +9,7 @@ axis_arrow_size = 10
 axis_arrow_angle = 0.4
 
 
-class DrawableElements:
-
-    offset = np.array([0,0])
-
-    def set_offset(self, offset):
-        self.offset = np.array(offset)
-
-    def draw(self, inherited_offset=np.array([0,0])):
-        for element in self.elements:
-            element.draw(self.offset+inherited_offset)
-
-
-class Axis(DrawableElements):
+class CoordinateAxis:
 
     def __init__(self,
         angle: float = 0,
@@ -29,6 +17,7 @@ class Axis(DrawableElements):
         min_value: float = -1,
         max_value: float = 1,
         origin_value: float = 0,
+        tick_angle: float = None,
     ):
         self.angle = angle
         self.length = length
@@ -45,22 +34,33 @@ class Axis(DrawableElements):
         self.vertex0 = -self.origin_offset
         self.vertex1 = -self.origin_offset+self.axis_vector
 
+        self.tick_angle = tick_angle
+
         self.elements = [
-            Lines(
+            Lines.from_zipped(
                 [self.vertex0, self.vertex1],
                 color=(0.2, 0.2, 0.2),
+                width=1,
             ),
-            self.arrow_lines()
+            self.generate_tick_marks(tick_angle=(self.tick_angle or self.angle+NORTH)),
+            self.generate_arrow_lines(),
         ]
-    
+
     def value_to_position(self, value):
         return (value - self.min_value) / self.range * self.axis_vector
-    
+
     def position_to_value(self, position):
         return np.linalg.norm(position) / self.length * self.range + self.min_value
+
+    def generate_tick_marks(self, n=10, tick_size=4, tick_angle=np.pi/4):
+        tick_positions = [self.vertex0 + k/n*self.axis_vector for k in range(n)]
+        return Lines.from_zipped(        
+            [tick_positions[k//2] + (-1 if k % 2 else 1)*tick_size*np.array((np.cos(tick_angle), np.sin(tick_angle))) for k in range(2*n)],
+            color=(0.2, 0.2, 0.2), width=1,
+        )
     
-    def arrow_lines(self):
-        return Lines(
+    def generate_arrow_lines(self):
+        return Lines.from_zipped(
             [
                 self.vertex1 + axis_arrow_size*np.array((np.cos(self.angle+np.pi-axis_arrow_angle), np.sin(self.angle+np.pi-axis_arrow_angle))),
                 self.vertex1,
@@ -70,55 +70,86 @@ class Axis(DrawableElements):
             connected=True,
         )
 
+    def draw(self, inherited_offset=np.array([0,0])):
+        for element in self.elements:
+            element.draw(inherited_offset)
 
-class CartesianPlot(DrawableElements):
+
+class Cartesian2D:
 
     def __init__(self,
         position: tuple[int, int],
-        x_axis: Axis,
-        y_axis: Axis,
+        x_axis: CoordinateAxis,
+        y_axis: CoordinateAxis,
     ):
         self.position = np.array(position)
-        super().set_offset(self.position)
-        
         self.x_axis = x_axis
         self.y_axis = y_axis
 
         self.elements = [
             self.x_axis,
             self.y_axis,
-            #Lines([self.plot_coord_to_pos((x,y)) for x, y in zip(np.arange(0,10,0.1), map(lambda x: np.sqrt(1-(x/3-2)**2), np.arange(0,10,0.1)))], width=2, connected=True),
-            #SquarePoints([self.plot_coord_to_pos((x,y)) for x, y in zip(np.arange(0,10,0.01), map(lambda x: -np.sqrt(1-(x/3-2)**2), np.arange(0,10,0.01)))], size=2),
         ]
     
-    def plot_coord_to_pos(self, coord):
+    def coord_to_pos(self, coord):
         return self.position + self.x_axis.value_to_position(coord[0]) + self.y_axis.value_to_position(coord[1])
 
+    def draw(self, inherited_offset=np.array([0,0])):
+        for element in self.elements:
+            element.draw(self.position+inherited_offset)
 
-class ScatterPlot(DrawableElements):
 
-    def __init__(self, x_values, y_values):
-        super().set_offset((100, 100))
+class SingleQuadrantPlot:
 
-        min_x, max_x = min(x_values), max(x_values)
-        self.x_margin = (max_x - min_x) * 0.3
+    def __init__(self, x_values, y_values, margin_factor=0.1):
+        self.position = np.array([100, 100])
 
-        min_y, max_y = min(y_values), max(y_values)
-        self.y_margin = (max_y - min_y) * 0.3
+        self.x_values = x_values
+        self.y_values = y_values
+        
+        self.margin_factor = margin_factor
 
-        self.cartesian = CartesianPlot(
+        self.max_x, self.min_x = max(self.x_values), min(self.x_values)
+        self.x_margin = (self.max_x - self.min_x) * self.margin_factor
+
+        self.max_y, self.min_y = max(self.y_values), min(self.y_values)
+        self.y_margin = (self.max_y - self.min_y) * self.margin_factor
+
+        x_axis_angle = EAST
+        y_axis_angle = NORTH
+
+        self.coordinate_system = Cartesian2D(
             (0, 0),
-            Axis(EAST, 400, min_x-self.x_margin, max_x+self.x_margin, min_x-self.x_margin),
-            Axis(NORTH, 400, min_y-self.y_margin, max_y+self.y_margin, min_y-self.y_margin),
+            CoordinateAxis(x_axis_angle, 300, self.min_x-self.x_margin, self.max_x+self.x_margin, self.min_x-self.x_margin, tick_angle=y_axis_angle),
+            CoordinateAxis(y_axis_angle, 300, self.min_y-self.y_margin, self.max_y+self.y_margin, self.min_y-self.y_margin, tick_angle=x_axis_angle),
         )
 
+        self.points = [self.coord_to_pos((x, y)) for x, y in zip(self.x_values, self.y_values)]
+
         self.elements = [
-            self.cartesian,
-            SquarePoints([self.plot_coord_to_pos((x, y)) for x, y in zip(x_values, y_values)], size=6)
+            self.coordinate_system,
         ]
 
-    def plot_coord_to_pos(self, coord):
-        return self.cartesian.plot_coord_to_pos(coord) + [self.x_margin, self.y_margin]
+    def coord_to_pos(self, coord):
+        return self.coordinate_system.coord_to_pos(coord)
+
+    def draw(self, inherited_offset=np.array([0,0])):
+        for element in self.elements:
+            element.draw(self.position+inherited_offset)
+
+
+class ScatterPlot(SingleQuadrantPlot):
+
+    def __init__(self, x_values, y_values, points_type=SquarePoints, **kwargs):
+        super().__init__(x_values, y_values, **kwargs)
+        self.elements.extend([points_type(*zip(*self.points), **kwargs)])
+
+
+class LinePlot(SingleQuadrantPlot):
+
+    def __init__(self, x_values, y_values, width=3, **kwargs):
+        super().__init__(x_values, y_values, **kwargs)
+        self.elements.extend([Lines(*zip(*self.points), connected=True, width=width)])
 
 
 # TODO: histograms, heatmaps, trend lines, R^2 values
