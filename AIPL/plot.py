@@ -108,9 +108,10 @@ class SingleQuadrantPlot:
         x_values,
         y_values,
         margin_factor=0.1,
-        size=(400, 400)
+        size=(400, 400),
+        position=(0, 0),
     ):
-        self.position = np.array([100, 100])
+        self.position = np.array(position)
 
         self.x_values = x_values
         self.y_values = y_values
