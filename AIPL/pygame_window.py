@@ -8,7 +8,7 @@ clock = pygame.time.Clock()
 class Window:
 
     def __init__(self,
-        title: str,
+        title: str = 'Plot',
         size: tuple[int, int] = (600, 400),
         background_color: str = '#ffffff',
     ):
@@ -17,11 +17,15 @@ class Window:
         self.title = title
         self.width = width
         self.height = height
+        
+        self.middle = width/2, height/2
+        self.topleft = width/2, height/2
+
         self.background_color = background_color
 
         self.window_surface = pygame.display.set_mode(size)
         pygame.display.set_caption(title)
-        self.reset()
+        self.clear()
 
     def mainloop(self):
         looping = True
@@ -39,7 +43,7 @@ class Window:
     def update(self):
         pygame.display.update()
 
-    def reset(self):
+    def clear(self):
         self.window_surface.fill(self.background_color)
 
     def render(self, obj, position=np.array((0,0))):
