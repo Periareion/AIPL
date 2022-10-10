@@ -1,9 +1,7 @@
-import OpenGL
-from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 
-from .window_handler import Window
+from .pygame_window import Window
 from .function import *
 from .geometry import *
 from .plot import *
