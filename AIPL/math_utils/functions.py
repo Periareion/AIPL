@@ -1,6 +1,14 @@
 
 import numpy as np
 
+from .constants import *
+
+
+def create_range(f, start=0, end=1, n=10):
+    step = (end - start) / n
+    ar = np.arange(start, end, step)
+    return ar, list(map(f, ar))
+
 
 class Function:
 
@@ -17,18 +25,12 @@ class Function:
         self.derivative = lambda x: (self.function(x+dx) - self.function(x)) / dx
         return self.derivative
     
-    def create_primitive(self, dx=10e-9):
+    def create_primitive(self, dx=1e-9):
         return NotImplemented
 
+    def create_range(self, start=0, end=0, n=10):
+        return create_range(self, start, end, n)
 
-def get_points(f, start=0, end=1, n=10):
-    step = (end - start) / n
-    ar = np.arange(start, end, step)
-    return ar, list(map(f, ar))
-
-
-pi = np.pi
-tau = 2*pi
 
 square = Function(lambda x: x**2, lambda x: 2*x, lambda x: x**3/3)
 cube = Function(lambda x: x**3, lambda x: 3*x**2, lambda x: x**4/4)

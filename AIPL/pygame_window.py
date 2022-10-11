@@ -41,7 +41,7 @@ class Window:
         self.window_surface.fill(self.background_color)
 
 
-    def mainloop_events(self, update_window=True, clear_surface=True):
+    def mainloop_events(self, clear_surface=False, update_window=True, auto_quit=True):
         
         if (current_time := time.perf_counter()) - self.last_loop_time < self.SPF:
             self.last_loop_time = current_time
@@ -55,7 +55,8 @@ class Window:
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
+                if auto_quit:
+                    pygame.quit()
                 return True
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_F1:

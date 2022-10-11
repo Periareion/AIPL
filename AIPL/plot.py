@@ -10,25 +10,6 @@ arrow_tip_size = 10
 arrow_tip_angle = 0.4
 
 
-class PlotPoints2D:
-
-    def __init__(self,
-        plot,
-        x_values,
-        y_values,
-        *args,
-        **kwargs,
-    ):
-        self.plot = plot
-        self.x_values = x_values
-        self.y_values = y_values
-        self.args = args
-        self.kwargs = kwargs
-    
-    def draw(self, surface, inherited_offset=np.array((0,0))):
-        points = [self.plot.coordinate_to_position((x, y)) for x, y in zip(self.x_values, self.y_values)]
-        Lines(*zip(*points), contiguous=True, *self.args, **self.kwargs).draw(surface, inherited_offset)
-
 
 class CoordinateAxis:
 
@@ -101,13 +82,13 @@ class CoordinateAxis:
 
     def generate_tick_marks(self, n=10, tick_size=2, tick_angle=np.pi/4):
         tick_positions = [self.axis_tail_pos + k/n*self.axis_vector for k in range(n)]
-        return Lines.from_zipped(        
+        return Lines(        
             [tick_positions[k//2] + (-1 if k % 2 else 1)*tick_size*np.array((np.cos(tick_angle), np.sin(tick_angle))) for k in range(2*n)],
             color=(0.2, 0.2, 0.2), width=1,
         )
     
     def generate_arrow_tips(self):
-        return Lines.from_zipped(
+        return Lines(
             [
                 self.axis_head_pos + arrow_tip_size*np.array((np.cos(self.angle+np.pi-arrow_tip_angle), np.sin(self.angle+np.pi-arrow_tip_angle))),
                 self.axis_head_pos,
@@ -119,7 +100,7 @@ class CoordinateAxis:
 
     def generate_drawing_instructions(self):
         self.drawing_instructions = [
-            Lines.from_zipped([self.axis_tail_pos, self.axis_head_pos], color=(0.2, 0.2, 0.2), width=1),
+            Lines([self.axis_tail_pos, self.axis_head_pos], color=(0.2, 0.2, 0.2), width=1),
             self.generate_tick_marks(tick_angle=utils.default(self.angle+NORTH, self.tick_angle)),
             self.generate_arrow_tips(),
         ]
@@ -178,16 +159,14 @@ class Cartesian2D(Plot):
 class SingleQuadrantPlot(Cartesian2D):
 
     def __init__(self,
-        x_values,
-        y_values,
+        axis_coordinates=[(0,0)],
         size=(400, 400),
         position=(0, 0),
-        margins=(0.1, 0.3),
+        margins=(0.1, 0.1),
     ):
         self.x_length, self.y_length = size
 
-        self.x_values = x_values
-        self.y_values = y_values
+        self.x_values, self.y_values = axis_coordinates
 
         self.max_x, self.min_x = max(self.x_values), min(self.x_values)
         self.max_y, self.min_y = max(self.y_values), min(self.y_values)
@@ -206,18 +185,53 @@ class SingleQuadrantPlot(Cartesian2D):
         #self.points = [self.coordinate_to_position((x, y)) for x, y in zip(self.x_values, self.y_values)]
 
 
-class ScatterPlot(SingleQuadrantPlot):
-
-    def __init__(self, x_values, y_values, points_type=SquarePoints, **kwargs):
-        super().__init__(x_values, y_values, **kwargs)
-        self.drawing_instructions.extend([points_type(*zip(*self.points), **kwargs)])
+class PlotCoordinates2D:
+    
+    def __init__(self,
+        plot,
+        coordinates,
+    ):
+        self.plot = plot
+        self.coordinates = list(coordinates)
+    
+    @classmethod
+    def from_axes(cls, plot, axis_coordinates):
+        return cls(plot, zip(*axis_coordinates))
+    
+    def draw(self, surface, inherited_offset=np.array((0,0))):
+        points = [self.plot.coordinate_to_position(coord) for coord in self.coordinates]
+        self.plot.draw_points(points, surface, inherited_offset)
 
 
 class LinePlot(SingleQuadrantPlot):
 
-    def __init__(self, x_values, y_values, width=3, **kwargs):
-        super().__init__(x_values, y_values, **kwargs)
-        self.drawing_instructions.extend([PlotPoints2D(self, x_values, y_values)]) #Lines(*zip(*self.points), contiguous=True, width=width)
+    def __init__(self,
+        axis_coordinates,
+        size=(200,200),
+        position=(0,0),
+        **kwargs
+    ):
+        super().__init__(axis_coordinates, size=size, position=position)
+        self.plot_points = PlotCoordinates2D.from_axes(self, axis_coordinates)
+        self.drawing_instructions.extend([self.plot_points])
+        self.kwargs = kwargs
 
+    def draw_points(self, points, surface, inherited_offset=np.array((0,0))):
+        lines = Lines(points, contiguous=True, **self.kwargs)
+        lines.draw(surface, inherited_offset)
+
+
+class ScatterPlot(SingleQuadrantPlot):
+
+    def __init__(self, point_coords, points_type=SquarePoints, **kwargs):
+        super().__init__(point_coords)
+        self.kwargs = kwargs
+        self.plot_points = PlotCoordinates2D(self, point_coords)
+        self.drawing_instructions.extend([self.plot_points])
+
+        self.points_type = points_type
+    
+    def draw_points(self, points, surface, inherited_offset=np.array((0,0))):
+        self.points_type(*zip(*self.points), **self.kwargs).draw(surface, inherited_offset)
 
 # TODO: histograms, heatmaps, trend lines, R^2 values

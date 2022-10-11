@@ -6,13 +6,15 @@ from . import graphics
 
 class AbstractPoints:
 
-    def __init__(self, x_values, y_values):
-        self.x_values = x_values
-        self.y_values = y_values
+    def __init__(self, points):
+        self.points = points
     
     @classmethod
-    def from_zipped(cls, points, *args, **kwargs):
-        return cls(*zip(*points), *args, **kwargs)
+    def from_axes(cls, x_values, y_values, *args, **kwargs):
+        return cls(zip(x_values, y_values), *args, **kwargs)
+    
+    def unzip(self):
+        return zip(self.points)
 
 
 class Points(AbstractPoints):
@@ -22,8 +24,8 @@ class Points(AbstractPoints):
         self.color = color
 
     def draw(self, surface, offset=np.array((0,0))):
-        for x, y in zip(self.x_values, self.y_values):
-            graphics.set_at(surface, offset + (x, y), self.color)
+        for point in zip(self.x_values, self.y_values):
+            graphics.set_at(surface, offset + point, self.color)
 
 
 class SquarePoints(AbstractPoints):
@@ -44,16 +46,14 @@ class SquarePoints(AbstractPoints):
 class Lines(AbstractPoints):
 
     def __init__(self,
-        x_values,
-        y_values,
+        points,
         color = '#2570cd',
         width = 1,
         contiguous: bool = False,
         closed: bool = False,
         smooth: bool = True,
     ):
-        self.x_values = x_values
-        self.y_values = y_values
+        self.points = points
         
         self.color = color
         self.width = width
@@ -62,10 +62,10 @@ class Lines(AbstractPoints):
         self.closed = closed
         self.smooth = smooth
 
-        self.n = len(self.x_values)
+        self.n = len(self.points)
 
     def draw(self, surface, offset=np.array((0,0))):
-        points = [offset + (x, y) for x, y in zip(self.x_values, self.y_values)]
+        points = [offset + point for point in self.points]
 
         if self.contiguous:
             graphics.lines(surface, points, self.color, self.smooth, self.width, self.closed)
