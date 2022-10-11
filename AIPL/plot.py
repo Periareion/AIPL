@@ -88,8 +88,8 @@ class CoordinateAxis:
         
         self.origin_offset = self.value_to_position(self.origin)
     
-        self.vertex0 = -self.origin_offset
-        self.vertex1 = -self.origin_offset+self.axis_vector
+        self.axis_tail_pos = -self.origin_offset
+        self.axis_head_pos = -self.origin_offset+self.axis_vector
 
 
     def value_to_position(self, value):
@@ -100,7 +100,7 @@ class CoordinateAxis:
 
 
     def generate_tick_marks(self, n=10, tick_size=2, tick_angle=np.pi/4):
-        tick_positions = [self.vertex0 + k/n*self.axis_vector for k in range(n)]
+        tick_positions = [self.axis_tail_pos + k/n*self.axis_vector for k in range(n)]
         return Lines.from_zipped(        
             [tick_positions[k//2] + (-1 if k % 2 else 1)*tick_size*np.array((np.cos(tick_angle), np.sin(tick_angle))) for k in range(2*n)],
             color=(0.2, 0.2, 0.2), width=1,
@@ -109,9 +109,9 @@ class CoordinateAxis:
     def generate_arrow_tips(self):
         return Lines.from_zipped(
             [
-                self.vertex1 + arrow_tip_size*np.array((np.cos(self.angle+np.pi-arrow_tip_angle), np.sin(self.angle+np.pi-arrow_tip_angle))),
-                self.vertex1,
-                self.vertex1 + arrow_tip_size*np.array((np.cos(self.angle+np.pi+arrow_tip_angle), np.sin(self.angle+np.pi+arrow_tip_angle))),
+                self.axis_head_pos + arrow_tip_size*np.array((np.cos(self.angle+np.pi-arrow_tip_angle), np.sin(self.angle+np.pi-arrow_tip_angle))),
+                self.axis_head_pos,
+                self.axis_head_pos + arrow_tip_size*np.array((np.cos(self.angle+np.pi+arrow_tip_angle), np.sin(self.angle+np.pi+arrow_tip_angle))),
             ],
             color=(0.2, 0.2, 0.2),
             contiguous=True,
@@ -119,7 +119,7 @@ class CoordinateAxis:
 
     def generate_drawing_instructions(self):
         self.drawing_instructions = [
-            Lines.from_zipped([self.vertex0, self.vertex1], color=(0.2, 0.2, 0.2), width=1),
+            Lines.from_zipped([self.axis_tail_pos, self.axis_head_pos], color=(0.2, 0.2, 0.2), width=1),
             self.generate_tick_marks(tick_angle=utils.default(self.angle+NORTH, self.tick_angle)),
             self.generate_arrow_tips(),
         ]
@@ -182,6 +182,7 @@ class SingleQuadrantPlot(Cartesian2D):
         y_values,
         size=(400, 400),
         position=(0, 0),
+        margins=(0.1, 0.3),
     ):
         self.x_length, self.y_length = size
 
@@ -190,13 +191,15 @@ class SingleQuadrantPlot(Cartesian2D):
 
         self.max_x, self.min_x = max(self.x_values), min(self.x_values)
         self.max_y, self.min_y = max(self.y_values), min(self.y_values)
+        self.x_margin = (self.max_x - self.min_x) * margins[0]
+        self.y_margin = (self.max_y - self.min_y) * margins[1]
 
         x_axis_angle = EAST
         y_axis_angle = NORTH
 
         super().__init__(
-            CoordinateAxis(x_axis_angle, self.x_length, self.min_x, self.max_x, self.min_x, y_axis_angle),
-            CoordinateAxis(y_axis_angle, self.y_length, self.min_y, self.max_y, self.min_y, x_axis_angle),
+            CoordinateAxis(x_axis_angle, self.x_length, self.min_x-self.x_margin, self.max_x+self.x_margin, self.min_x-self.x_margin, y_axis_angle),
+            CoordinateAxis(y_axis_angle, self.y_length, self.min_y-self.y_margin, self.max_y+self.y_margin, self.min_y-self.y_margin, x_axis_angle),
             position=position,
         )
 

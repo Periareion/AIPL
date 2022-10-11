@@ -1,4 +1,6 @@
 
+import time
+
 import pygame
 import numpy as np
 
@@ -26,19 +28,11 @@ class Window:
         self.window_surface = pygame.display.set_mode(size)
         pygame.display.set_caption(title)
         self.clear()
+        
+        self.last_loop_time = 0
+        self.FPS = 60
+        self.SPF = 1/self.FPS
 
-    def mainloop(self):
-        looping = True
-        while looping:
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    looping = False
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_F1:
-                        pygame.image.save(self.window_surface, 'screenshot.png')
-
-            clock.tick(60)
 
     def update(self):
         pygame.display.update()
@@ -46,6 +40,32 @@ class Window:
     def clear(self):
         self.window_surface.fill(self.background_color)
 
-    def render(self, obj, position=np.array((0,0))):
+
+    def mainloop_events(self, update_window=True, clear_surface=True):
+        
+        if (current_time := time.perf_counter()) - self.last_loop_time < self.SPF:
+            self.last_loop_time = current_time
+            return False
+        
+        if update_window:
+            self.update()
+
+        if clear_surface:
+            self.clear()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                return True
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_F1:
+                    pygame.image.save(self.window_surface, 'screenshot.png')
+
+    def mainloop(self):
+        looping = True
+        while looping:
+            looping = not bool(self.mainloop_events(auto_quit=False))
+        pygame.quit()
+
+    def render(self, obj, position=np.array((0,0)), update_window=True):
         obj.draw(self.window_surface, position)
-        self.update()
