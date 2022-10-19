@@ -1,14 +1,30 @@
 
 import numpy as np
 
+from .colors import *
 from .geometry import *
+from . import graphics
 from . import utils
+
 
 EAST, NORTH, WEST, SOUTH = 0, np.pi/2, np.pi, 3/4*np.pi
 
+
+class Plot:
+    
+    def __init__(self,
+        position: tuple[int, int],
+    ):
+        self.position = np.array(position)
+        
+        self.drawing_instructions = []
+    
+    def draw(self, surface, inherited_offset=np.array((0,0))):
+        for instruction in self.drawing_instructions:
+            instruction.draw(surface, self.position+inherited_offset)
+
 arrow_tip_size = 10
 arrow_tip_angle = 0.4
-
 
 
 class CoordinateAxis:
@@ -100,7 +116,7 @@ class CoordinateAxis:
 
     def generate_drawing_instructions(self):
         self.drawing_instructions = [
-            Lines([self.axis_tail_pos, self.axis_head_pos], color=(0.2, 0.2, 0.2), width=1),
+            Lines([self.axis_tail_pos, self.axis_head_pos], color=(0.2, 0.2, 0.2), width=2, smooth=False),
             self.generate_tick_marks(tick_angle=utils.default(self.angle+NORTH, self.tick_angle)),
             self.generate_arrow_tips(),
         ]
@@ -108,20 +124,6 @@ class CoordinateAxis:
     def draw(self, surface, inherited_offset=np.array((0,0))):
         for instruction in self.drawing_instructions:
             instruction.draw(surface, inherited_offset)
-
-
-class Plot:
-    
-    def __init__(self,
-        position: tuple[int, int],
-    ):
-        self.position = np.array(position)
-        
-        self.drawing_instructions = []
-    
-    def draw(self, surface, inherited_offset=np.array((0,0))):
-        for instruction in self.drawing_instructions:
-            instruction.draw(surface, self.position+inherited_offset)
 
 
 class Cartesian2D(Plot):
@@ -156,10 +158,71 @@ class Cartesian2D(Plot):
         return self.position + self.x_axis.value_to_position(coord[0]) + self.y_axis.value_to_position(coord[1])
 
 
+class HeatMap(Cartesian2D):
+    
+    def __init__(self,
+        matrix,
+        gradient,
+        size=(200, 200),
+        position=(0, 0),
+        **kwargs
+    ):
+        matrix -= np.min(matrix)
+        matrix /= np.max(matrix)
+        self.matrix = matrix
+        self.gradient = gradient
+        
+        self.size = size
+        self.x_length, self.y_length = size
+        self.position = position
+
+        self.rows = len(self.matrix)
+        self.columns = len(self.matrix[0])
+        
+        self.cell_width = self.size[0] / self.columns
+        self.cell_height = self.size[1] / self.rows
+
+        x_axis_angle = EAST
+        y_axis_angle = NORTH
+        
+        super().__init__(
+            CoordinateAxis(x_axis_angle, self.x_length, 0, self.columns, 0, y_axis_angle),
+            CoordinateAxis(y_axis_angle, self.y_length, 0, self.rows, 0, x_axis_angle),
+            position=position,
+        )
+    
+    def draw(self, surface, inherited_offset=np.array((0,0))):
+        inherited_offset = np.array(inherited_offset)
+        
+        x_positions = np.zeros((self.rows+1, self.columns+1))
+        y_positions = np.zeros((self.rows+1, self.columns+1))
+        
+        for j in range(self.rows+1):
+            for i in range(self.columns+1):
+                x_positions[j][i], y_positions[j][i] = self.coordinate_to_position((i, j))
+                #y_positions[j][i] = self.y_length - y_positions[j][i]
+        
+        
+        for j in range(self.rows):
+            for i in range(self.columns):
+                color = self.gradient(self.matrix[j][i])
+                vertices = (
+                    inherited_offset + (x_positions[j][i], y_positions[j][i]),
+                    inherited_offset + (x_positions[j+1][i], y_positions[j+1][i]),
+                    inherited_offset + (x_positions[j+1][i+1], y_positions[j+1][i+1]),
+                    inherited_offset + (x_positions[j][i+1], y_positions[j][i+1]),
+                )
+                graphics.polygon(surface, color, vertices, width=0)
+        
+        
+        for instruction in self.drawing_instructions:
+            instruction.draw(surface, self.position+inherited_offset)
+        
+
 class SingleQuadrantPlot(Cartesian2D):
 
     def __init__(self,
-        axis_coordinates=[(0,0)],
+        axis_coordinates: tuple[list[float], list[float]]=([0], [0]),
         size=(400, 400),
         position=(0, 0),
         margins=(0.1, 0.1),
@@ -188,8 +251,8 @@ class SingleQuadrantPlot(Cartesian2D):
 class PlotCoordinates2D:
     
     def __init__(self,
-        plot,
-        coordinates,
+        plot: Plot,
+        coordinates: list[tuple[int, int]],
     ):
         self.plot = plot
         self.coordinates = list(coordinates)
@@ -207,8 +270,8 @@ class LinePlot(SingleQuadrantPlot):
 
     def __init__(self,
         axis_coordinates,
-        size=(200,200),
-        position=(0,0),
+        size=(200, 200),
+        position=(0, 0),
         **kwargs
     ):
         super().__init__(axis_coordinates, size=size, position=position)
@@ -223,7 +286,11 @@ class LinePlot(SingleQuadrantPlot):
 
 class ScatterPlot(SingleQuadrantPlot):
 
-    def __init__(self, point_coords, points_type=SquarePoints, **kwargs):
+    def __init__(self,
+        point_coords,
+        points_type=SquarePoints,
+        **kwargs
+    ):
         super().__init__(point_coords)
         self.kwargs = kwargs
         self.plot_points = PlotCoordinates2D(self, point_coords)
@@ -233,5 +300,6 @@ class ScatterPlot(SingleQuadrantPlot):
     
     def draw_points(self, points, surface, inherited_offset=np.array((0,0))):
         self.points_type(*zip(*self.points), **self.kwargs).draw(surface, inherited_offset)
+
 
 # TODO: histograms, heatmaps, trend lines, R^2 values

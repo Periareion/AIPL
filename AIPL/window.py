@@ -4,7 +4,7 @@ import time
 import pygame
 import numpy as np
 
-clock = pygame.time.Clock()
+from . import utils
 
 
 class Window:
@@ -12,7 +12,7 @@ class Window:
     def __init__(self,
         title: str = 'Plot',
         size: tuple[int, int] = (600, 400),
-        background_color: str = '#ffffff',
+        background_color: str = '#36393F',
     ):
         width, height = size
 
@@ -25,27 +25,29 @@ class Window:
 
         self.background_color = background_color
 
-        self.window_surface = pygame.display.set_mode(size)
+        self.surface = pygame.display.set_mode(size)
         pygame.display.set_caption(title)
         self.clear()
         
         self.last_loop_time = 0
         self.FPS = 60
         self.SPF = 1/self.FPS
+        self.clock = pygame.time.Clock()
 
 
     def update(self):
         pygame.display.update()
 
     def clear(self):
-        self.window_surface.fill(self.background_color)
+        self.surface.fill(self.background_color)
 
 
     def mainloop_events(self, clear_surface=False, update_window=True, auto_quit=True):
         
         if (current_time := time.perf_counter()) - self.last_loop_time < self.SPF:
-            self.last_loop_time = current_time
             return False
+        pygame.display.set_caption(f'FPS: {round(1 / (current_time - self.last_loop_time), 2)}')
+        self.last_loop_time = current_time
         
         if update_window:
             self.update()
@@ -60,7 +62,8 @@ class Window:
                 return True
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_F1:
-                    pygame.image.save(self.window_surface, 'screenshot.png')
+                    image_name = utils.first_available_filename_number('screenshots/screenshot', '.png')
+                    pygame.image.save(self.surface, image_name)
 
     def mainloop(self):
         looping = True
@@ -69,4 +72,4 @@ class Window:
         pygame.quit()
 
     def render(self, obj, position=np.array((0,0)), update_window=True):
-        obj.draw(self.window_surface, position)
+        obj.draw(self.surface, position)
